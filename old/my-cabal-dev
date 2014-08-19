@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+sub get_dir1 {
+    my ($dir) = @_;
+    chomp $dir;
+    my $cb_dir = "$dir/cabal-dev";
+    return ($dir,$cb_dir);
+}
+
+sub get_dir {
+    my ($dir,$cb_dir) = get_dir1(`pwd`);
+    while ((! -d $cb_dir) && ("$dir" ne "/")) {
+        ($dir, $cb_dir) = get_dir1(`dirname $dir`);
+    }
+    return ($dir,$cb_dir);
+}
+
+sub with_cabal_dev {
+    my ($dir,$cb_dir,@args) = @_;
+
+    chdir $dir or die "$!";
+    cab_dev_cmd($cb_dir,@args);
+}
+
+sub no_cabal_dev {
+    my ($cb_dir,@args) = @_;
+
+    cab_dev_cmd($cb_dir,@args);
+}
+
+sub cab_dev_cmd {
+    my ($cb_dir,@args) = @_;
+    print("cabal-dev @args\n");
+    system("cabal-dev @args\n");
+}
+
+
+
+my ($dir,$cb_dir) = get_dir();
+
+if (($ARGV[0] eq "new") && (! -d $cb_dir)) {
+    print "new cabal-dev sandbox forced, making one here\n";
+
+    no_cabal_dev($cb_dir,@ARGV[1 .. $#ARGV]);
+} else {
+    if (! -d $cb_dir) {
+        print "no cabal-dev sandbox found, making new one here\n";
+        no_cabal_dev($cb_dir,@ARGV);
+    } else {
+        print ("using existing cabal-dev sandbox $cb_dir\n");
+        with_cabal_dev($dir,$cb_dir,@ARGV);
+    }
+}
+

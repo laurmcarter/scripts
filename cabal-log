@@ -1,0 +1,15 @@
+#!/bin/bash
+
+dir=`pwd | xargs basename`
+
+logs_dir='.cabal-sandbox/logs'
+
+file=`find $logs_dir -name "*$dir*"`
+
+if [ -n "$file" ]; then
+    $EDITOR "$file"
+else
+    echo "No log file found in $logs_dir"
+    exit 1
+fi
+

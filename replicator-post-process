@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+    echo "Usage: `basename $0` <file>"
+    exit 1
+fi
+
+gcode="$1"
+new=`echo "$gcode" | sed 's/gcode$/new.gcode/'`
+
+
+
+# copy file
+echo "Copying $gcode to ${new}..."
+cat $gcode > $new
+
+# Changes #############################
+
+# change platform heat to 30, for printing with PLA
+echo "Changing platform heat to 30 C..."
+sed -i '/HBP temperature/ s/S[0-9]*/S30/' $new
+
+echo
+
+# Review and Finalization #############
+
+echo "Changes:"
+echo
+diff $gcode $new
+
+echo "Replace ${gcode}?"
+
+read -n1 -p '[y/N]' final
+echo -e "\n"
+
+if [ "`echo -n $final | tr '[A-Z]' '[a-z]'`" == "y" ]; then
+    mv $new $gcode
+    echo "Replaced."
+else
+    echo "Not replaced. Changes stored in $new"
+fi
+
+

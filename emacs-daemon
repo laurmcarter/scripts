@@ -1,0 +1,29 @@
+#!/bin/bash
+
+PID=`ps ax | grep emacs | grep '\-\-daemon' | awk '{print $1}'`
+
+if [ "$1" == "start" ]; then
+    echo start
+    if [ "$PID" == "" ]; then
+        emacs -nw --daemon
+    else
+        echo "daemon is already running: $PID"
+    fi
+
+elif [ "$1" == "stop" ]; then
+    echo stop
+    if [ "$PID" == "" ]; then
+        echo "daemon is not running"
+    else
+        kill "$PID"
+    fi
+
+elif [ "$1" == "restart" ]; then
+    echo restart
+    $0 stop
+    $0 start
+
+else
+    echo "$0 <start|stop|restart>"
+fi
+

@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo 'xrandr --output VGA1 --off'
+echo 'xrandr --output LVDS1 --right-of DP2 --auto'
+xrandr --output VGA1 --off
+xrandr --output LVDS1 --right-of DP2 --auto
+

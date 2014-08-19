@@ -1,0 +1,169 @@
+#!/bin/bash
+
+# Usage {{{
+
+prg=`basename $0`
+function usage {
+    echo "Usage: $prg [ -h | -b (default) ] <file>"
+    exit 1
+}
+[[ $# -ge 1 ]] || usage
+
+# }}}
+
+# Variables {{{
+
+bin_dir="$HOME/bin"
+makefile="$bin_dir/Makefile"
+
+# }}}
+
+# File Types {{{
+
+function gen_makefile_entries {
+    local bin_name="$1"
+    local make_hdr="$2"
+    local rm_hdr="$3"
+    local src_names="${@:4}"
+    entry_name="$bin_name"
+    add_makefile_entry="
+$entry_name: $src_names
+	$make_hdr $bin_name $src_names
+"
+}
+
+function camel_case_to_hyphen {
+    local s="$1"
+    echo "${s:0:1}$(echo "${s:1}" | sed 's/[A-Z]/-&/g')" | tr [A-Z] [a-z]
+}
+
+function ft_haskell {
+    ft='haskell'
+    src_file="$1.hs"
+    file="$bin_dir/$src_file"
+
+    bin_name=`camel_case_to_hyphen "$1"`
+    gen_makefile_entries \
+      "$bin_name"        \
+      "ghc -o"           \
+      "rm -f"            \
+      "$src_file"
+
+    contents="
+module Main where
+
+main :: IO ()
+main = return ()
+"
+}
+
+function ft_bash {
+    ft='bash'
+    file="$bin_dir/$1"
+
+    contents="#!/bin/bash
+"
+}
+
+function ft_default {
+    ft_bash "$1"
+}
+
+# }}}
+
+# Flags {{{
+
+case "$1" in
+    -h ) ft_haskell  "$2"                    ;;
+    -b ) ft_bash     "$2"                    ;;
+    -* ) echo "Unrecognized flag: $1"; usage ;;
+    *  ) ft_default  "$1"                    ;;
+esac
+
+# }}}
+
+# Makefile Alteration {{{
+
+function view_makefile_entry {
+    local file="$1"
+    local entry="$2"
+    cat "$file" | sed -n "/^$entry\>/,/^$/p"
+    sed -i "/^$entry\>/,/^$/d" "$file"
+}
+
+function alter_makefile_entry {
+
+    local file="$1"
+    local entry_name="$2"
+    local new_all_line="$3"
+    local new_clean_line="$4"
+    local new_entry="$5"
+
+    local all_entry=`view_makefile_entry "$file" "all"`
+    local clean_entry=`view_makefile_entry "$file" "clean"`
+    local old_entry=`view_makefile_entry "$file" "$entry_name"`
+    local other_contents=`cat "$file"`
+    local new_all=`echo "$all_entry" | \
+                   sed "/^\s*make ${entry_name}\s*$/d"`
+    local new_all="${new_all}\n\t${new_all_line}"
+    local new_clean=`echo "$clean_entry" | \
+                     sed "/^\s*rm -f ${entry_name}\s*$/d"`
+    local new_clean="${new_clean}\n\t${new_clean_line}"
+    echo -e "\n\n${new_all}\n\n${new_clean}\n\n${other_contents}\n\n${new_entry}\n\n" | \
+      cat -s - > "$file"
+}
+
+# }}}
+
+# Overwrite Protection and Script Creation {{{
+
+function new_file {
+
+    # Create script
+    echo -e "$contents" > "$file"
+
+    # Make script executable
+    chmod +x "$file"
+
+    # Add contents for Makefile, if any exist
+    if [ -n "$add_makefile_entry" ]; then
+        alter_makefile_entry    \
+          "$makefile"           \
+          $entry_name           \
+          "make $entry_name"    \
+          "rm -f $entry_name"   \
+          "$add_makefile_entry"
+    fi
+
+}
+
+function edit_remake {
+
+    $EDITOR "$file"
+    
+    if [ -n "$add_makefile_entry" ]; then
+        cd "$bin_dir" && make all
+    fi
+
+}
+
+if [ -f $file ]; then
+    # File exists
+    echo "File already exists: $file"
+    get-confirm 'Overwrite?'
+    if [[ "$?" == 0 ]]; then
+        new_file
+
+    else
+        echo "Nevermind."
+        get-confirm -y 'Still edit?'
+        [[ "$?" == 0 ]] || exit 0
+    fi
+else
+    new_file
+fi
+
+edit_remake
+
+# }}}
+

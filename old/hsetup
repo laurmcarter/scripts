@@ -1,0 +1,643 @@
+#!/usr/bin/bash
+
+# hsetup -- a utility for quick setup of haskell projects 
+# User Modifiable fields ##################################
+
+
+
+# Init {{{
+
+# program's name
+myname=`basename $0`
+# top level directory
+topdir=`pwd`
+
+# }}}
+
+# warn {{{
+
+function warn {
+    echo "WARNING: $@" >&2
+}
+
+# }}}
+
+# match {{{
+
+# bash builtin pattern matching is stupid
+function match {
+    echo "$1" | grep -q "$2"
+    return $?
+}
+
+# }}}
+
+# protect args from stupid getopt {{{
+
+function output {
+    
+    printf "%b\n" "$@"
+}
+
+function protect_args {
+    declare -a arr=( "$@" )
+    for ((i=0;i<$#;i++))
+    do
+        arr[i]=`echo "${arr[i]}" | tr ' ' '_'`
+    done
+
+    echo "${arr[*]}"
+}
+
+function arg_substs {
+    declare -a new=()
+    i=0
+    for a
+    do
+        if $(match "$a" ' ')
+        then
+            new[i]=`echo "$a" | tr ' ' '_'`
+            new[i]="-e 's/${new[i]}/$a/'"
+            let i++
+        fi
+    done
+
+    echo "${new[*]}"
+}
+
+# }}}
+
+# Setup ####################################################
+
+# Flag defaults {{{
+
+# NB: any var that may be set by flag parsing should be defined here, not below
+
+author=''
+install=false
+test=false
+help=false
+exemain=''
+modules=''
+verbose=1
+src='src'
+log="/tmp/${myname}.log"
+
+# }}}
+
+# Flag Parsing {{{
+
+args_in="${*:1}"
+args=`protect_args $args_in`
+substs=`arg_substs $args_in`
+args=`getopt a:hitxX:l:m:s:v: $args`; errcode=$?; set -- $args
+
+function back {
+    if [ -z "$substs" ]
+    then
+        echo "$@"
+    else
+        echo "$@" | eval "sed $substs"
+    fi
+}
+
+for i
+do
+    case "$i" in
+        -h ) help=true; shift; break;;
+        -a ) author=`back "$2"`; shift 2;;
+        -i ) install=true; shift;;
+        -t ) test=true; shift;;
+        -x ) echo exe1; exemain='Main.hs'; shift;;
+        -X ) echo exe2; exemain=`back "$2"`; shift 2;;
+        -l ) log=`back "$2"`; shift 2;;
+        -m ) modules=`back "$2"`; shift 2;;
+        -s ) src=`back "$2"`; shift 2;;
+        -v ) verbose=`back "$2"`; shift 2;;
+        -- ) shift; break;;
+    esac
+done
+
+# }}}
+
+# Help and usage {{{
+
+# Check for sufficient args
+if [ $errcode -ne 0 ] || [ $# -lt 1 ] || $help ; then
+
+    cat <<EOF
+Usage: $myname [FLAGS] <name> [dep1] [dep2] ...
+
+  Required:
+    name : name of project to set up, and subdirectory to be installed into.
+
+  Optional:
+    deps : packages (space separated) upon which project depends.
+
+  Flags:          | Default         | Description
+    --------------+-----------------+------------
+    -a <author>   | <cabal-default> | set the author field in the cabal file
+    -h            | N/A             | print this help message
+    -i            | false           | run 'cabal install' after setup
+    -t            | false           | print setup commands instead of executing
+    -e            | false           | build an executable
+    -E <main.hs>  | false           | build an executable, with <main.hs> as the entry
+    -l <log-file> | /tmp/hsetup.log | specify <log-file> as the log for output and errors
+    -m            | none            | modules to export from library, comma separated
+    -s <src-dir>  | 'src'           | use <src-dir> as name of source directory
+    -v <level>    | 0               | set cabal's verbosity
+EOF
+
+    exit
+fi
+
+# }}}
+
+# Corner cases {{{
+
+if $install && [ -n $exemain ]
+then
+    echo 'WARNING: Executable and Install flags set. The install will always fail. Ignoring install.' >2
+    echo
+    install=false
+fi
+
+if [[ $verbose -lt 0 ]]
+then
+    verbose=0
+elif [[ $verbose -gt 3 ]]
+then
+    verbose=3
+fi
+
+# }}}
+
+# Variables {{{
+
+# Project name
+dir="$1"
+# Project dependencies
+deps="${@:2}"
+# Source directory name
+
+# Dependencies : "dep1 dep2 ..." => "--dependency=dep1 --dependency=dep2 ..."
+deps=`echo "$deps" | sed -e 's/ / --dependency=/g' -e 's/^./--dependency=&/g'`
+
+# Exposed Modules : "m1,m2,..." => "--expose-module=m1 --expose-module=m2 ..."
+modules=`echo "$modules" | sed -e 's/^./ &/' -e 's/,/ /g'`
+module_paths=`echo "$modules" | sed -e 's|\.|/|g' -e "s| \(\S\+\)| $src/\1.hs|g"`
+exposed_modules=`echo "$modules" | sed -e 's/ / --expose-module=/g'`
+# Clean up leading whitespace on all three
+exposed_modules=`echo "$exposed_modules" | tail -c+2`
+modules=( `echo "$modules" | tail -c+2` )
+module_paths=( `echo "$module_paths" | tail -c+2` )
+
+# Even if the overall verbosity is 0, we still want to log cabal's output
+cabal_verb=`echo "$verbose" | tr '0' '1'`
+
+dirname="'$dir'"
+srcname="'$src'"
+logname="'$log'"
+
+# }}}
+
+# Function definitions #####################################
+
+# escape_args {{{
+
+# quote the arguments that need quoting
+function escape_args {
+
+declare -a args=( "$@" )
+for ((i=0;i<${#args[@]};i++))
+do
+    a="${args[i]}"
+    # "--foo=bar" => "--foo='bar'"
+    if $( match "$a" '=' )
+    then
+        args[$i]=`echo "$a" | sed "s/\(--\S\+=\)\(.*\)/\1\'\2\'/"`
+    # "foo bar" => "'foo bar'"
+    # "/foo/,$p" => "'/foo/,$p'"
+    # ...
+    elif $( match "$a" '[ ,;]' )
+    then
+        args[$i]="'$a'"
+    fi
+done
+
+echo "${args[@]}"
+
+}
+
+# }}}
+
+# log_msg {{{
+
+# put something in the log file (-r to overwrite the log file)
+function log_msg {
+    replace=false
+    if [ "$1" == "-r" ]
+    then
+        replace=true
+        shift
+    fi
+
+    if $replace
+    then
+        echo -e "$@" > $log
+    else
+        echo -e "$@" >> $log
+    fi
+}
+
+# }}}
+
+# section_{start,end} {{{
+
+# signal the start of a section
+function section_start {
+if [ $verbose -gt 0 ]
+then
+    section_name=`echo "$1" | tr '[a-z]' '[A-Z]'`
+    echo -e "*** $section_name ***\n"
+fi
+}
+
+# signal the end of a section
+function section_end {
+if [ $verbose -gt 0 ]
+then
+    echo -e "\n*** Done ***\n"
+fi
+}
+
+# }}}
+
+# echo_section {{{
+
+function echo_section {
+    # If the section is empty, we have nothing to do
+    if [ -z "$1" ]; then return 0; fi
+    
+    section=( "$1" )
+    section_name=`echo "$section" | sed -ne '/section_start/ s/section_start \(.*\)/\1/; p' \
+                                  | head -n1 \
+                                  | tr '[a-z]' '[A-Z]'`
+
+    declare -a section_out=()
+    i=0
+    while read -r line
+    do
+        if $( match "$line" '^capture' )
+        then
+            # put the redirection back, and remove the 'capture'
+            line=`echo "$line" | sed -e 's/-a \(\S\+\) \(.*\)/\2 >> \1/g' \
+                                     -e 's/-o \(\S\+\) \(.*\)/\2 > \1/g' \
+                                     -e 's/^capture //g'`
+        elif $( match "$line" '^msg' )
+        then
+            # remove the quotes and exchange msg for a commenting '#'
+            line=`echo "$line" | sed -e '/^msg/ s/['\''"]//g' \
+                                     -e 's/^msg/#/g'`
+        fi
+        section_out[$i]="$line"
+        let i++
+    done < <( echo "$section" )
+
+    # gather it all up on separate lines
+    section=`printf -- "%s\n" "${section_out[@]}"`
+    # get rid of section lines, and condense the empty lines and superfluous whitespace
+    section=`echo "$section" | sed -e '/^section/d' | cat -s`
+
+    echo "# *** $section_name ***"
+    echo "$section"
+    echo
+}
+
+# }}}
+
+# capture {{{
+
+function capture {
+tmp_out="/tmp/${myname}.err"
+tmp_err="/tmp/${myname}.out"
+pipe_out=''
+
+# we might want to redirect or append command output to a file
+if [[ "$1" == '-o' ]]
+# use > to redirect
+then
+    append=false
+    pipe_out="$2"
+    shift 2
+elif [[ "$1" == '-a' ]]
+# use >> to redirect
+then
+    append=true
+    pipe_out="$2"
+    shift 2
+fi
+
+wdir=`pwd | sed "s,$topdir\(/\)\?,,"`
+echo "capture:"
+for a
+do
+    echo "$a"
+done
+cmd=`escape_args "$@"`
+echo "command is : $cmd"
+outname="'$wdir/$pipe_out'"
+
+# do the thing, redirect the out and err into tmp files
+{ eval "$cmd" 2> $tmp_err; } > $tmp_out
+errcode="$?"
+
+# escape command for logging
+cmd=`echo "$cmd" | sed 's/\\\\/\\\\\\\\/g'`
+
+# Redirection {{{
+
+if [ -n "$pipe_out" ]
+then
+    if $append
+    then
+        cat $tmp_out >> $pipe_out
+    else
+        cat $tmp_out > $pipe_out
+    fi
+fi
+
+# }}}
+
+# Logging {{{
+cmd_log="* Command:\n  $wdir $ $cmd\n"
+
+# "If no actual text from stderr"...
+if [ -n "`grep '\S' $tmp_err`" ]
+then
+    err_log="* Errors:\n`cat $tmp_err`\n\n"
+else
+    err_log="* Success.\n"
+fi
+
+out_log=''
+# Logging redirection
+if [ -n "$pipe_out" ]
+then
+    if $append
+    then
+        out_log="* Appended output to ${outname}.\n"
+    else
+        out_log="* Redirected output to ${outname}.\n"
+    fi
+fi
+
+# "If no actual text from stdout"...
+if [ -n "`grep '\S' $tmp_out`" ]
+then
+    out_log="${out_log}* Output:\n`cat $tmp_out`\n***\n"
+else
+    out_log="${out_log}***\n"
+fi
+
+# log errors and output
+log_msg "${cmd_log}${err_log}${out_log}"
+
+# }}}
+
+# Verbose-dependent output {{{
+
+# maybe actually print it out
+if [ $verbose -gt 1 ]
+then
+    echo -ne "${cmd_log}${err_log}"
+    if [ $verbose -gt 2 ]
+    then
+        echo -ne "$out_log"
+    fi
+fi
+
+# }}}
+
+# Temp cleanup {{{
+
+# delete the temp files
+rm -f $tmp_err
+rm -f $tmp_out
+
+if [ $errcode -ne 0 ]
+then
+    echo "Encountered errors, exiting."
+    echo "Check log file $logname for details"
+    exit 1
+fi
+
+# }}}
+
+}
+
+# }}}
+
+# msg {{{
+
+function msg {
+replace=false
+if [ "$1" == "-r" ]
+then
+    replace=true
+    shift
+fi
+
+message="$@"
+
+if $replace
+then
+    log_msg -r "*** $message"
+else
+    log_msg "*** $message"
+fi
+
+if [ $verbose -gt 0 ]
+then
+    echo "$message"
+fi
+}
+
+# }}}
+
+# Sections ################################################
+
+# Structure {{{
+
+read -r -d '' dir_cmds <<EOF
+
+section_start structure
+
+msg "creating directory $dirname"
+capture mkdir $dir
+
+msg "entering directory $dirname"
+capture cd $dir
+
+msg "creating directory $srcname"
+capture mkdir $src
+
+module_paths=( ${module_paths[@]} )
+modules=( ${modules[@]} )
+
+msg "creating empty modules...    "
+for ((i=0;i<\${#module_paths[@]};i++))
+do
+    mpath="\${module_paths[i]}"
+    mname="\${modules[i]}"
+
+    capture -o "\$mpath" echo -e "\nmodule \$mname where\n"
+    msg "created module '\$mname' at '\$mpath'"
+done
+
+
+section_end
+
+EOF
+
+# }}}
+
+# Library {{{
+
+author_flag=`echo "$author" | sed "s/\(.\+\)/--author='\1'/"`
+echo "author_flag=$author_flag"
+
+# Set up cabal, start sandbox, install if 'install' flag is set
+# 'sed' line is to split dependencies up onto separate lines
+read -r -d '' lib_cmds <<EOF
+
+section_start library
+
+msg 'creating library cabal file...    '
+capture cabal init --no-comments --non-interactive \
+  --verbose=$cabal_verb \
+  $author_flag \
+  --license=BSD3 \
+  --source-dir=$src \
+  --dependency=base $deps \
+  $exposed_modules
+
+msg 'initializing sandbox...    '
+capture cabal sandbox init
+
+section_end
+
+EOF
+
+# }}}
+
+# Executable {{{
+
+# include an executable, if the '-x' or '-X' flags were given
+exe_cmds=''
+if [ -n "$exemain" ]
+then
+    read -r -d '' exe_cmds <<EOF
+
+section_start executable
+
+msg "creating temporary subdirectory $dirname"
+capture mkdir $dir
+
+msg "entering $dirname"
+capture cd $dir
+
+msg 'creating executable cabal file...    '
+capture cabal init --quiet --no-comments --non-interactive \
+  --verbose=$cabal_verb \
+  --dependency=base --dependency=$dir $deps \
+  --source-dir=$src \
+  --is-executable
+
+msg 'cleaning up...    '
+capture sed -i -e "/main-is/ s/-- \(.*$\)/\1$exemain/" \
+  $dir.cabal
+
+msg "leaving directory $dirname"
+capture cd ..
+
+msg 'joining executable and library cabal files...    '
+echo -e "\n" >> $dir.cabal
+capture -a $dir.cabal sed -n -e '/executable/,\$p' $dir/$dir.cabal
+echo -e "\n" >> $dir.cabal
+
+msg "removing temporary subdirectory $dirname"
+capture rm -rf $dir
+
+msg "creating empty entry module '$exemain'"
+capture -o "$exemain" echo -e "\nmain :: IO ()\nmain = return ()\n"
+
+section_end
+
+EOF
+fi
+
+# }}}
+
+# Cleanup {{{
+
+# Cleaning up the .cabal file
+#  - separate dependencies onto their own lines
+read -r -d '' cleanup_cmds <<EOF
+
+section_start cleanup
+
+msg 'splitting exposed modules onto separate lines'
+capture sed -i '/exposed-modules/ s/, /\n                       /g' $dir.cabal
+
+msg 'splitting package dependencies onto separate lines'
+capture sed -i 's/any,/&\n                      /g' $dir.cabal
+
+section_end
+
+EOF
+
+# }}}
+
+# Install {{{
+
+# install the package, if the '-i' flag was given
+install_cmds=''
+if $install
+then
+    read -r -d '' install_cmds <<EOF
+
+section_start installation
+
+msg 'installing package...    '
+capture cabal --verbose=$cabal_verb install
+
+section_end
+
+EOF
+fi
+
+# }}}
+
+
+
+# Run the thing {{{
+
+if $test
+then
+    echo_section "$dir_cmds"
+    echo_section "$lib_cmds"
+    echo_section "$exe_cmds"
+    echo_section "$cleanup_cmds"
+    echo_section "$install_cmds"
+else
+    msg -r "working in '`pwd`'"
+    eval "$dir_cmds"
+    eval "$lib_cmds"
+    eval "$exe_cmds"
+    eval "$cleanup_cmds"
+    eval "$install_cmds"
+fi
+
+# }}}
+

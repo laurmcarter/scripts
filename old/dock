@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+
+if (($#ARGV >= 0) && ($#ARGV <= 1)) {
+    if ($ARGV[0] == "on") {
+        system "xrandr --output LVDS1 --off";
+        system "xrandr --output DP2 --left-of VGA1 --auto";
+        system "xrandr --output VGA1 --right-of DP2 --auto";
+    } elsif ($ARGV[0] == "off") {
+        system "xrandr --output DP2 --off";
+        system "xrandr --output VGA1 --off";
+        system "xrandr --output LVDS1 --auto";
+    } else {
+        usage();
+    }
+    system "xmodmap -quiet ~/.Xmodmap &> /dev/null";
+}
+
+unless (($#ARGV == 1) && ($ARGV[1] == "norestart" )) {
+    system "xmonad --restart";
+}
+
+sub usage {
+    print "$0 <on/off> [norestart]\n";
+    exit 1;
+}
+

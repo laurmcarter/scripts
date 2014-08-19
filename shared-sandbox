@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ -n "$1" ]]; then
+    dir="$1"
+else
+    dir='.'
+fi
+
+cabal sandbox init --sandbox="$dir/.cabal-sandbox"
+

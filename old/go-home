@@ -1,0 +1,26 @@
+#!/usr/bin/perl 
+
+my $user = "kylcarte";
+my $host = "kylcarte.no-ip.org";
+
+
+sub go_home {
+    my (@args) = @_;
+    my $addr = join ("@",($user,$host));
+    if ($#args != -1) {
+        $as = "\"@args\"";
+    } else {
+        $as = "@args";
+    }
+    system("ssh -X -t $addr $as");
+}
+
+
+if ($ARGV[0] eq "-new") {
+    go_home ("tmux");
+} elsif ($ARGV[0] eq "-notmux") {
+    go_home ();
+} else {
+    go_home ("tmux attach || tmux");
+}
+

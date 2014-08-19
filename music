@@ -1,0 +1,21 @@
+#!/usr/bin/perl 
+
+my $user = "kylcarte";
+# my $ext_host = "kylcarte.noip.me";
+my $ext_host = "24.21.244.2";
+my $int_host = "10.0.0.100";
+
+
+sub mount_music {
+    my $is_home = `/home/kcarter/bin/is-home`;
+    if ($is_home == 0) {
+        $host = $int_host;
+    } else {
+        $host = $ext_host;
+    }
+        my $addr = join ("@",($user,$host));
+    exec("sshfs $addr:/mnt/music /home/kcarter/Music");
+}
+
+mount_music();
+

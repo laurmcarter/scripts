@@ -1,0 +1,43 @@
+#!/bin/bash
+
+if [[ $1 ]]; then
+    if [[ $2 ]]; then
+        # latest _ <num>
+        limit="$2"
+    fi
+    if   [[ "$1" == "-f" ]]; then
+        # latest -f
+        files_only=1
+    elif [[ "$1" == "-a" ]]; then
+        # latest -a
+        all=1
+    else
+        # latest <num>
+        dirs_only=1
+        limit="$1"
+    fi
+else
+    # default case is only dirs, no limit
+    dirs_only=1
+fi
+
+if [[ $dirs_only ]]; then
+    if [[ $limit ]]; then
+        ls -Ft | grep '/$' | head -n "$limit" | sed 's,/$,,'
+    else
+        ls -Ft | grep '/$' | sed 's,/$,,'
+    fi
+elif [[ $files_only ]]; then
+    if [[ $limit ]]; then
+        ls -Ft | grep -v '/$' | head -n "$limit"
+    else
+        ls -Ft | grep -v '/$'
+    fi
+elif [[ $all ]]; then
+    if [[ $limit ]]; then
+        ls -Ft | head -n "$limit"
+    else
+        ls -Ft
+    fi
+fi
+

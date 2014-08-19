@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function usage {
+    echo "Usage: `basename $0` <some/path/to/file>"
+    exit $1
+}
+
+[[ -n "$1" ]] || usage 1
+
+if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]]; then
+   usage 0
+fi
+
+file="$1"
+dir=`dirname $file`
+
+if [ ! -d $dir ]; then
+    echo "Directory '$dir' does not exist."
+    get-confirm 'Create?'
+    if [[ "$?" == 0 ]]; then
+        mkdir -p "$dir"
+    else
+        echo 'Nevermind.'
+        exit 1
+    fi
+fi
+

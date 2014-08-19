@@ -1,0 +1,38 @@
+#!/bin/bash
+
+if (( "$#" < 2 ))
+then
+    echo "Usage: ./copy-mod <src> <target>"
+    exit 1
+fi
+
+src="src"
+
+function module {
+    mod="$1"
+
+    IFS='.' read -ra PATH <<< "$mod"
+    MOD="$src"
+
+    if (( "${#PATH[@]}" < 1 ))
+    then
+        echo "Error: Empty source module name"
+        exit 1
+    fi
+    
+    for i in "${PATH[@]}"; do
+        MOD="$MOD/$i"
+    done
+    
+    MOD="$MOD.hs"
+    
+    echo "$MOD"
+}
+
+SRC=`module "$1"`
+TGT=`module "$2"`
+
+cp "$SRC" "$TGT"
+
+sed -i "s/module $1/module $2/" "$TGT"
+

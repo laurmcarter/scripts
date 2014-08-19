@@ -1,0 +1,4 @@
+#!/bin/bash
+
+java -Xmx1024M -Xms512M -cp ~/.mc/minecraft.jar net.minecraft.LauncherFrame
+

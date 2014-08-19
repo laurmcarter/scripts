@@ -1,0 +1,27 @@
+#!/bin/bash
+
+if [[ "$1" == "-y" ]]; then
+    default_yes=1
+    prompt="${@:2}"
+else
+    prompt="$@"
+fi
+
+if [ $default_yes ]; then
+    prompt="$prompt (Y/n): "
+else
+    prompt="$prompt (y/N): "
+fi
+
+echo -e "$prompt"
+read resp
+resp=`echo "${resp:0:1}" | tr [A-Z] [a-z]`
+
+if [ ! $resp ] && [ $default_yes ]; then
+    exit 0
+elif [[ "$resp" == 'y' ]]; then
+    exit 0
+else
+    exit 1
+fi
+

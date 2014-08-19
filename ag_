@@ -1,0 +1,9 @@
+#!/bin/bash
+
+/usr/local/bin/ag \
+   --color-line-number '0;32' \
+   --color-match '1;31' \
+   --color-path '0;35' \
+   --column \
+   $@
+

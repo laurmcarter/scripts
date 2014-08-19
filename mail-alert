@@ -1,0 +1,26 @@
+#!/usr/bin/python
+
+from Xlib import X, display, Xutil
+
+def find_window(name, w):
+    for win in w.query_tree().children:
+        if win.get_wm_class() and win.get_wm_class()[1] == name:
+            return win
+        
+        if len(win.query_tree().children) > 0:
+            a = find_window(name, win)
+            if a:
+                return a
+
+def main(disp):
+    win = find_window("Thunderbird", disp.screen().root)
+    hints = win.get_wm_hints() or { 'flags': 0 }
+
+    hints['flags'] |= Xutil.UrgencyHint
+    
+    win.set_wm_hints(hints)
+    disp.flush()
+
+if __name__ == '__main__':
+    main(display.Display())
+

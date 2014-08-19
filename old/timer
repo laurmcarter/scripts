@@ -1,0 +1,14 @@
+#!/usr/bin/perl
+
+if ($#ARGV == 0) {
+    sleep (int($ARGV[0]));
+    system "echo -e '\a'";
+} else {
+    usage();
+}
+
+sub usage {
+    print "$0 <secs>\n";
+    exit 1;
+}
+

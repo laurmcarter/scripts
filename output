@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# Stupid BASH fiddling to get around using echo {{{
+
+function fiddle {
+    # get the argument
+    a="$@"
+    # escape backslashes
+    a="${a//\\/\\\\}"
+    # wrap it in single quotes if it contains spaces
+    pat='[\s\\]'
+    if [[ $a =~ $pat ]]
+    then
+        a="\'$a\'"
+    fi
+    echo "$a"
+}
+
+declare -a args=( $@ )
+for ((i=0;i<$#;i++))
+do
+    args[i]=`fiddle "${args[i]}"`
+done
+set -- ${args[@]}
+
+# proceed as normal
+
+# }}}
+
+# parse options {{{
+
+cmd="getopt ne $@"
+echo "$cmd"
+args=`eval "$cmd"`; errcode=$?
+
+set -- ${args[@]}
+
+trail_line=true
+expand_special=false
+
+for i
+do
+    case "$i" in
+        -n ) trail_line=false; shift;;
+        -e ) expand_special=true; shift;;
+        -- ) shift; break;;
+    esac
+done
+
+echo "$@"
+echo "$#"
+
+# }}}
+
+# construct the format string {{{
+
+if $expand_special
+then
+    str='%b'
+else
+    str='%s'
+fi
+n=`printf "%$#s"`
+format_string="${n// /$str}"
+if $trail_line
+then
+    format_string="$format_string\n"
+fi
+
+# }}}
+
+# run the command {{{
+
+cmd="printf '$format_string' $@"
+echo "$cmd"
+# eval "$cmd"
+
+# }}}
+

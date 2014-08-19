@@ -1,0 +1,34 @@
+#!/bin/bash
+
+default_dir='.'
+
+if [[ $# -eq 1 ]]; then
+    dir="$default_dir"
+    arg="$1"
+else
+    dir="$1"
+    arg="$2"
+fi
+
+grep -R "$arg" "$dir" | grep -v "Binary file" | while read -r line; do
+    file=`echo "$line" | cut -d: -f1`
+    ref=`echo "$line" | cut -d: -f2- | sed -e 's/^ *//g' -e 's/ *$//g'`
+
+    ref=`echo "$ref" | grep -o -P ".{0,15}$arg.{0,15}"`
+    start=`echo "$ref" | grep "^$arg"`
+    end=`echo "$ref" | grep "$arg$"`
+    if [[ -z "$start" ]]; then
+        ref="... $ref"
+    else
+        ref="    $ref"
+    fi
+    if [[ -z "$end" ]]; then
+        ref="$ref ..."
+    else
+        ref="$ref    "
+    fi
+
+    printf "%-30s" "$file"
+    echo "$ref" | grep --color=auto "$arg"
+done
+

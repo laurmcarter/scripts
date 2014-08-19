@@ -1,0 +1,28 @@
+# Hi there! This is a license file for a piece of software from 
+# Galois, Inc.. This file is formatted as a series of license 
+# blocks. Should you wish to simplify your file system, multiple 
+# Galois license files can be combined into a single file. This is 
+# true even if the license files are for different programs or versions.
+# For simplicity, we suggest you do this combination, and just 
+# combine your licenses into a single file named 'galois.lic'.
+#
+# Programs from Galois, Inc. will check the GALOIS_LICENSE_FILE 
+# environment variable for the location of such a file.
+#
+# If you are using license server on your local network, you can 
+# create client license blocks using the following format: 
+#
+#  network_license {
+#    hostname = "<your license server>";
+#    port = <port number>;
+# }
+#
+license {
+  company = "Galois, Inc.";
+  program = "Cryptol";
+  version = 1.x;
+  type = Unrestricted;
+  key = "4-3b2713-2e6d97ccde9-76293fe04cde98";
+}
+
+

@@ -1,0 +1,65 @@
+#!/bin/bash
+
+if [[ -d 'src' ]]; then
+    path='src'
+else
+    path='.'
+fi
+
+# default to finding haskell files
+ext='.hs'
+
+for i; do
+    case "$i" in
+        -b ) ext=''    ; shift 1 ;; # bash file
+        -f ) ext=".$2" ; shift 2 ;; # custom extension
+        -p ) path="$2" ; shift 2 ;; # custom path
+    esac
+done
+
+file="*${1}${ext}"
+
+
+filler=$( for i in $(seq 1 40); do echo -n '. '; done )
+
+results=( $(find "$path" -path "$file") )
+n=${#results[@]}
+
+case "$n" in
+    0 ) echo "No results."; exit 1 ;;
+    1 ) 
+        f="${results[0]}"
+        echo "Single result: $f"
+        get-confirm -y "Edit?"
+        if [[ "$?" == "0" ]]; then
+            edit=$f
+        fi;;
+    * )
+
+        for (( i=0;i<$n;i++ )); do
+            this="${results[i]}"
+            pref=$(prefixes "$last" "$this")
+            l=${#pref}
+            printf '%-2s ' "$i"
+            if [[ $l -ne 0 ]]; then
+                echo "$filler" | head -c "$((l - 1))"
+            fi
+            echo "$this" | tail -c "+$l"
+            last=$this
+        done
+    
+        echo "Edit file? [0-$((n - 1))]"
+        read resp
+        [[ -n "$resp" ]] || exit 0
+    
+        for (( i=0;i<$n;i++ )); do
+            if [[ "$resp" -eq "$i" ]]; then
+                edit="${results[i]}"
+            fi
+        done;;
+esac
+
+if [[ -n "$edit" ]]; then
+    $EDITOR "$edit"
+fi
+

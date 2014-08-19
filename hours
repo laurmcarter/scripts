@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [[ -z "$1" ]]; then
+    echo "convert hours to seconds"
+    echo "usage: hours <n>"
+    exit 0
+fi
+
+echo "$1 * 60 * 60" | bc
+

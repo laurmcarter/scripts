@@ -1,0 +1,39 @@
+#!/bin/bash
+
+darkbg="solarized"
+lightbg="default"
+
+vimrc="$HOME/.vimrc"
+termrc="$HOME/.config/xfce4/terminal/terminalrc"
+term_dir="$HOME/.terminalconfigs"
+
+isdark=`grep "^colorscheme $darkbg" $vimrc`
+
+if [ -n "$isdark" ]
+then
+    oldbg=$darkbg
+    bg=$lightbg
+else
+    oldbg=$lightbg
+    bg=$darkbg
+fi
+
+echo "Switching bg: $bg"
+
+# Edit .vimrc to switch vim colorscheme
+sed -i "s/^colorscheme $oldbg/colorscheme $bg/" $vimrc
+
+termrc_add="$term_dir/$bg"
+
+# Switch out terminalrc to change term color palette
+if [ -f $termrc_add ]; then
+    tmp='/tmp/terminalrc'
+    sed '/Color/d' $termrc | cat -s - $termrc_add | sed '/^$/d' > $tmp
+    mv $tmp $termrc
+fi
+
+# Tell all the vims to refresh .vimrc
+if [ -f $HOME/bin/vim-source-rc ]; then
+    $HOME/bin/vim-source-rc
+fi
+

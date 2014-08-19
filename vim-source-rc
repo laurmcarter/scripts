@@ -1,0 +1,6 @@
+#!/bin/bash
+
+tmux-panes-running vim | while read -r pane; do 
+    tmux send-keys -t "$pane" Escape ':so\ $MYVIMRC' Enter
+done
+

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+cmd="$1"
+
+panes=($(tmux list-panes -a -F '#{pane_pid},#{session_name}:#{window_index}.#{pane_index}'))
+
+cmd_pids=`pgrep -x "$cmd"`
+
+for pane in ${panes[@]}; do
+    pane=(${pane/,/ })
+    pid=${pane[0]}
+    pane_id=${pane[1]}
+    pid=`resolve-pid $pid`
+    if [[ "$cmd_pids" =~ $pid ]]; then
+        echo "$pane_id"
+    fi
+done
+

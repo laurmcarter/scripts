@@ -1,0 +1,5 @@
+#!/bin/bash
+
+sed -i 's/S110/S30/' /home/kcarter/Downloads/galois_cryptex/test*.gcode
+
+

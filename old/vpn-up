@@ -1,0 +1,20 @@
+#!/bin/bash
+
+VPN="galois-offsite"
+ETH="Boot Disk"
+WLS="Locus"
+
+ACTIVE_ETH=$( nmcli con status | grep "$ETH" | grep "yes")
+ACTIVE_WLS=$( nmcli con status | grep "$WLS" | grep "yes")
+
+until [ "$ACTIVE_ETH" -o "$ACTIVE_WLS" ]; do
+    sleep 2
+    ACTIVE_ETH=$( nmcli con status | grep "$ETH" | grep "yes")
+    ACTIVE_WLS=$( nmcli con status | grep "$WLS" | grep "yes")
+done
+
+ACTIVE_VPN=$( nmcli con status | grep "$VPN" )
+if [ ! "$ACTIVE_VPN" ]; then
+    nmcli con up id "$VPN"
+fi
+

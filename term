@@ -1,0 +1,8 @@
+#!/usr/bin/perl 
+
+use Env;
+
+my $cmd = "xfce4-terminal -e tmux";
+
+system $cmd;
+

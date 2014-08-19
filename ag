@@ -1,0 +1,28 @@
+#!/bin/bash
+
+args=( $@ ) 
+
+if [[ $# -lt 2 ]]; then
+  if [ -d 'src' ]; then
+    dir='src'
+  else
+    dir='.'
+  fi
+  args="${args[@]}"
+else
+  dir="$1"
+  args="${args[@]:1}"
+fi
+
+/usr/local/bin/ag \
+  --color-line-number '0;32' \
+  --color-match '1;31' \
+  --color-path '0;35' \
+  --column \
+  --ignore 'Setup.hs' \
+  --ignore 'dist' \
+  -G '\.l?(hs|x|y)' \
+  -A1 \
+  $args \
+  $dir
+

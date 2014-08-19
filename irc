@@ -1,0 +1,37 @@
+#!/usr/bin/perl 
+
+my $user = "kylcarte";
+# my $ext_host = "kylcarte.no-ip.org";
+my $ext_host = "24.21.244.2";
+my $int_host = "10.0.0.100";
+my $sess = "IRC";
+
+sub go_home {
+    my (@args) = @_;
+    if ($#args != -1) {
+        $as = "\\\"@args\\\"";
+    } else {
+        $as = "@args";
+    }
+    my $is_home = `/home/kcarter/bin/is-home`;
+    if ($is_home == 0) {
+        $host = $int_host;
+    } else {
+        $host = $ext_host;
+    }
+        my $addr = join ("@",($user,$host));
+    my $cmd = "xfce4-terminal --title=IRC -e \"ssh -X -t $addr $as\"";
+    print($cmd);
+    system($cmd);
+}
+
+# xfce4-terminal --title=IRC -e "ssh -t kylcarte@kylcarte.no-ip.org \"tmux new -s IRC '$SHELL -c finch; exec $SHELL'\""
+
+sub run_first {
+    return "\$SHELL -c $_[0]; exec \$SHELL"
+}
+
+my $remote_cmd = run_first "finch";
+
+go_home "tmux attach -t $sess || tmux new -s IRC \'$remote_cmd\'";
+

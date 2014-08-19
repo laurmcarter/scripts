@@ -1,0 +1,8 @@
+#!/bin/bash
+
+file="$1"
+swp="$(dirname $file)/.$(basename $file).swp"
+
+vim -r "$file"
+rm -f "$swp"
+

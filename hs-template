@@ -1,0 +1,43 @@
+#!/bin/bash
+
+pat='/'
+if [[ $1 =~ $pat ]]; then
+    file="$1"
+    echo "*** You entered a file path, not a module name: $file"
+    mod=`echo "$file" | sed -e 's+^.*src/++' -e 's+\.hs$++' -e 's+/+.+g'`
+    echo "FTFY: $mod"
+else
+    mod="$1"
+    file="src/$(echo "$mod" | sed 's+\.+/+g').hs"
+fi
+
+file=`realpath -m "$file"`
+deps=( ${@:2} )
+
+
+echo -e "\nFile: $file\nModule: $mod\n"
+
+if [[ -f "$file" ]]; then
+    echo "File already exists"
+    exit 1
+fi
+
+get-confirm -y 'Okay?'
+
+[[ "$?" == 0 ]] || exit 0
+
+mk-path-to $file
+[[ "$?" == 0 ]] || exit 1
+
+(
+    echo -e "\nmodule $mod where\n"
+
+    for d in ${deps[@]}; do
+        echo "import $d"
+    done
+
+    echo -e "\n"
+) > $file
+
+$EDITOR $file
+

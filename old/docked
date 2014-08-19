@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo 'xrandr --output DP2 --auto'
+xrandr --output DP2 --auto
+
+echo '/home/kcarter/bin/lid_event'
+/home/kcarter/bin/lid_event
+

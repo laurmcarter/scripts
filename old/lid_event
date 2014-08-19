@@ -1,0 +1,14 @@
+#!/bin/bash
+
+grep -q closed /proc/acpi/button/lid/LID/state
+if [ $? = 0 ]
+then
+    echo closed > /home/kcarter/.lid
+    echo '/home/kcarter/bin/close'
+    /home/kcarter/bin/close;
+else
+    echo opened > /home/kcarter/.lid
+    echo '/home/kcarter/bin/open'
+    /home/kcarter/bin/open;
+fi
+

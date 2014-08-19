@@ -1,0 +1,9 @@
+#!/bin/bash
+
+VPN="galois-offsite"
+
+ACTIVE_VPN=$( nmcli con status | grep "$VPN" )
+if [ ! "$ACTIVE_VPN" ]; then
+    nmcli con up id "$VPN"
+fi
+

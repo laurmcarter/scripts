@@ -1,0 +1,8 @@
+#!/usr/bin/perl 
+
+sub unmount_music {
+    exec("fusermount -u /home/kcarter/Music");
+}
+
+unmount_music();
+

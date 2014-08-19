@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd $HOME/replicatorg-0040
+
+./replicatorg

@@ -1,0 +1,11 @@
+#!/bin/bash
+
+pid="$1"
+
+while [ -n "$pid" ]; do
+    last="$pid"
+    pid=`pgrep -P $pid`
+done
+
+echo "$last"
+

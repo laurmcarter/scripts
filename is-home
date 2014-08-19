@@ -1,0 +1,5 @@
+#!/bin/bash
+
+ip addr | grep inet | grep '10.0.0' > /dev/null 2>&1
+
+echo $?

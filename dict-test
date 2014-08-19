@@ -1,0 +1,11 @@
+#!/bin/bash
+
+declare -A d
+
+i=0
+for arg; do
+    echo "$i $arg"
+    d[$i]=$arg
+    let i++
+done
+

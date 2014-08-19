@@ -1,0 +1,34 @@
+#!/usr/bin/perl 
+
+my $user = "kylcarte";
+my $ext_host = "24.21.244.2";
+# my $ext_host = "kylcarte.noip.me";
+my $int_host = "10.0.0.100";
+
+
+sub go_home {
+    my (@args) = @_;
+    if ($#args != -1) {
+        $as = "\"@args\"";
+    } else {
+        $as = "@args";
+    }
+    my $is_home = `/home/kcarter/bin/is-home`;
+    if ($is_home == 0) {
+        $host = $int_host;
+    } else {
+        $host = $ext_host;
+    }
+        my $addr = join ("@",($user,$host));
+    system("ssh -X -t $addr $as");
+}
+
+
+if ($ARGV[0] eq "-attach") {
+    go_home ("tmux attach");
+} elsif ($ARGV[0] eq "-notmux") {
+    go_home ();
+} else {
+    go_home ("tmux");
+}
+

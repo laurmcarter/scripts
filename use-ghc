@@ -1,0 +1,56 @@
+#!/bin/bash
+
+vrs_dir="$HOME/.ghc_versions"
+
+# grep: look for items with version numbers
+avail=( $( ls $vrs_dir | grep '^[0-9]' ) )
+
+# sed: remove symbolic link name, get basename of file
+cur=`ls -l $vrs_dir | grep current | sed -e 's/.* -> //' -e 's+.*/++g'`
+
+function show_avail {
+    echo "Available versions of ghc:"
+    local is_current
+    # mark currently used version with '*'
+    for v in ${avail[@]}; do
+        if [[ "$v" == "$cur" ]]; then
+            is_current='*'
+        else
+            is_current=' '
+        fi
+        echo "  $is_current $v"
+    done
+}
+
+if [[ -z "$1" ]]; then
+    show_avail
+    exit 0
+fi
+
+vrs="$1"
+
+pat="^$vrs"
+
+for v in ${avail[@]}; do
+    if [[ $v =~ $pat ]]; then
+        if [[ -z "$found" ]]; then
+            found="$v"
+        else
+            echo "Ambiguous version: $found or $v"
+            exit 1
+        fi
+    fi
+done
+
+if [[ -z "$found" ]]; then
+    echo "Version $vrs not found"
+    show_avail
+    exit 1
+else
+    echo "Using ghc-$found"
+
+    rm -f "$vrs_dir/current"
+    ln -s "$vrs_dir/$found" "$vrs_dir/current"
+fi
+
+

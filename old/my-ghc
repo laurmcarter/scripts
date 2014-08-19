@@ -1,0 +1,48 @@
+#!/usr/bin/perl
+
+sub get_dir1 {
+    my ($dir) = @_;
+    chomp $dir;
+    my $cb_dir = "$dir/cabal-dev";
+    return ($dir,$cb_dir);
+}
+
+sub get_dir {
+    my ($dir,$cb_dir) = get_dir1(`pwd`);
+    while ((! -d $cb_dir) && ("$dir" ne "/")) {
+        ($dir, $cb_dir) = get_dir1(`dirname $dir`);
+    }
+    return ($dir,$cb_dir);
+}
+
+sub with_cabal_dev {
+    my ($cb_dir,$ghc_vs,@args) = @_;
+    ghc_cmd($cb_dir,$ghc_vs,("-no-user-package-db","-package-db $cb_dir/packages-$ghc_vs.conf",@args));
+}
+
+sub no_cabal_dev {
+    my ($cb_dir,$ghc_vs,@args) = @_;
+
+    ghc_cmd($cb_dir,$ghc_vs,@args);
+}
+
+sub ghc_cmd {
+    my ($cb_dir,$ghc_vs,@args) = @_;
+    print("ghc @args\n");
+    system("ghc @args\n");
+}
+
+
+
+my $ghc_vs = `ghc --numeric-version`;
+chomp $ghc_vs;
+my ($dir,$cb_dir) = get_dir();
+
+if (! -d $cb_dir) {
+    # print "no cabal-dev sandbox found, making new one here\n";
+    no_cabal_dev($cb_dir,$ghc_vs,@ARGV);
+} else {
+    # print ("using existing cabal-dev sandbox $cb_dir\n");
+    with_cabal_dev($cb_dir,$ghc_vs,@ARGV);
+}
+

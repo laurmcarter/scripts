@@ -1,0 +1,27 @@
+#!/bin/bash
+
+. ~/.bash_colors
+
+GHCI="/usr/local/bin/ghci"
+
+GHC_VERSION=`${GHCI} --numeric-version`
+CABAL_DEV="./cabal-dev/packages-${GHC_VERSION}.conf"
+
+if [ -d "${CABAL_DEV}" ]; then
+    USE_CABAL_DEV="-no-user-package-db -package-db ${CABAL_DEV}"
+else
+    USE_CABAL_DEV=""
+fi
+
+{ ${GHCI} ${USE_CABAL_DEV} "${@}" 2>&3 |
+    sed "s/^Failed, modules loaded:/${TXTRED}&${TXTRST}/g;\
+         s/^Ok, modules loaded:/${TXTGRN}&${TXTRST}/g;\
+         s/^\[[0-9 ]\+ of[^]]*\]/${TXTGRN}&${TXTRST}/g;\
+         s/^GHCi.*/${TXTGRN}&${TXTRST}/g;\
+         s/^Loading.*/${TXTGRN}&${TXTRST}/g;\
+        ";
+} 3>&1 1>&2 |
+    sed "s/^.*:[0-9]\+:[0-9]\+:.*/${TXTRED}&${TXTRST}/g;\
+         s/^Warning:.*/${TXTYLW}&${TXTRST}/g;\
+        "
+
